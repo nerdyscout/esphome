@@ -49,7 +49,7 @@ light:
     pin: GPIO3
     num_leds: 120
     name: "NeoPixel Light"
-    color_correct: [70%, 70%, 70%]
+    color_correct: [60%, 60%, 60%]
     effects:
       - pulse:
       - random:
