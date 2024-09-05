@@ -1,0 +1,3 @@
+[submodule "esphome/components/roomba"]
+	path = esphome/components/roomba
+	url = https://github.com/mannkind/ESPHomeRoombaComponent
