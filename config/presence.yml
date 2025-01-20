@@ -1,0 +1,74 @@
+esphome:
+  name: presence
+  friendly_name: esp
+  name_add_mac_suffix: true
+
+esp8266:
+  board: esp01_1m
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: {}
+captive_portal:
+
+web_server:
+  port: 80
+  version: 3
+  local: true
+
+mqtt:
+  broker: !secret mqtt_broker
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  discovery: true
+
+logger:
+  #  level: DEBUG
+  baud_rate: 0
+
+# Dallas temperature sensor
+one_wire:
+  - platform: gpio
+    pin: GPIO1
+
+sensor:
+  - platform: dallas_temp
+    name: temperature
+    filters:
+      offset: -20
+
+# pins
+binary_sensor:
+  - platform: gpio
+    id: input
+    name: presence
+    device_class: motion
+    pin:
+      number: GPIO3
+      inverted: true
+      mode:
+        input: true
+    #        pullup: true
+    on_state:
+      then:
+        - light.toggle: out
+
+output:
+  - platform: gpio
+    id: relay
+    pin:
+      number: GPIO2
+
+light:
+  - platform: binary
+    id: out
+    name: light
+    output: relay
