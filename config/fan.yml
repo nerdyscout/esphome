@@ -23,11 +23,11 @@ web_server:
   version: 3
   local: true
 
-mqtt:
-  broker: !secret mqtt_broker
-  username: !secret mqtt_username
-  password: !secret mqtt_password
-  discovery: true
+#mqtt:
+#  broker: !secret mqtt_broker
+#  username: !secret mqtt_username
+#  password: !secret mqtt_password
+#  discovery: true
 
 logger:
   level: DEBUG
@@ -42,7 +42,7 @@ time:
 
 fan:
   - platform: binary
-    name: level1
+    name: Level 1
     id: level1
     output: power1
     on_turn_on:
@@ -50,7 +50,7 @@ fan:
         - fan.turn_off: level2
         - fan.turn_off: level3
   - platform: binary
-    name: level2
+    name: Level 2
     id: level2
     output: power2
     on_turn_on:
@@ -58,7 +58,7 @@ fan:
         - fan.turn_off: level1
         - fan.turn_off: level3
   - platform: binary
-    name: level3
+    name: Level 3
     id: level3
     output: power3
     on_turn_on:
@@ -82,7 +82,7 @@ output:
 binary_sensor:
   - platform: gpio
     id: button1
-    name: button1
+    name: Button 1
     device_class: power
     pin:
       number: GPIO12
@@ -102,7 +102,7 @@ binary_sensor:
 
   - platform: gpio
     id: button2
-    name: button2
+    name: Button 2
     device_class: power
     pin:
       number: GPIO13
@@ -122,7 +122,7 @@ binary_sensor:
 
   - platform: gpio
     id: button3
-    name: button3
+    name: Button 3
     device_class: power
     pin:
       number: GPIO14
@@ -153,3 +153,31 @@ sensor:
     pressure:
       name: "Pressure"
     update_interval: 60s
+
+number:
+  - platform: template
+    name: "Fan Level 1 Temperature Setpoint"
+    id: level1_setpoint
+    min_value: 10
+    max_value: 40
+    step: 1
+    initial_value: 20
+    optimistic: true
+
+  - platform: template
+    name: "Fan Level 2 Temperature Setpoint"
+    id: level2_setpoint
+    min_value: 10
+    max_value: 40
+    step: 1
+    initial_value: 25
+    optimistic: true
+
+  - platform: template
+    name: "Fan Level 3 Temperature Setpoint"
+    id: level3_setpoint
+    min_value: 10
+    max_value: 40
+    step: 1
+    initial_value: 30
+    optimistic: true
