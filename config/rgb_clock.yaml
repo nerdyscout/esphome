@@ -1,14 +1,12 @@
 esphome:
-  name: rgb-pixel-clock
+  name: clock
   friendly_name: esp
-#  board: esp32dev
-#  project:
-#    name: esphome.fan
-#    version: "1.0"
+  project:
+    name: esphome.clock
+    version: "1.0"
+
 esp32:
   board: esp32dev
-#  framework:
-#    type: esp-idf
 
 api:
 ota:
@@ -53,28 +51,18 @@ sensor:
     address: 0x23
     name: "Helligkeitssensor"
     update_interval: 10s
-    #    resolution: 4 # 1-4 (0.5-16lx Auflösung)
     id: bh1750_sensor
 
 # I2S-Mikrofon (INMP441)
-#i2s:
-#  bclk_pin: GPIO32
-#  lrclk_pin: GPIO33
-#  din_pin: GPIO25
-
-#microphone:
-#  - platform: i2s
-#    id: i2s_mic
-#    i2s_id: i2s
-#    adc_type: external
-#    pdm: false
-#    sample_rate: 16kHz
-
-# WS2812B LED-Matrix
-#output:
-#  - platform: ledc
-#    pin: GPIO16
-#    id: led_strip
+i2s_audio:
+  i2s_lrclk_pin: GPIO25
+  i2s_bclk_pin: GPIO26
+  i2s_mclk_pin: GPIO32
+microphone:
+  - platform: i2s_audio
+    id: external_mic
+    adc_type: external
+    i2s_din_pin: GPIO27
 
 light:
   - platform: neopixelbus
@@ -83,29 +71,6 @@ light:
     pin: GPIO16
     num_leds: 192
     name: "RGB Matrix"
-    #    brightness:
-    #      - lambda: |-
-    #          // Automatische Helligkeit (0-100%)
-    #          float lux = id(bh1750_sensor).state;
-    #          return (lux / 1000.0) * 100.0;  # 1000lx = 100% Helligkeit
-#    effects:
-#      - pulse:
-#          name: "Pulsieren"
-#      - lambda: |-
-#          // Uhrzeit-Anzeige
-#          auto time = id(ha_time).now();
-#          char time_str[6];
-#          strftime(time_str, sizeof(time_str), "%H:%M", time);
-
-#          // Matrix löschen
-#          for (int i = 0; i < 192; i++) {
-#            it.set_rgb(i, 0, 0, 0);
-#          }
-#
-#          // Hier Uhrzeit-Rendering implementieren
-#          it.schedule_show();
-#        name: "Uhrzeit"
-#        update_interval: 1s
 
 # Taster
 binary_sensor:
