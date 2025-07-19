@@ -1,0 +1,122 @@
+esphome:
+  name: rgb-pixel-clock
+  friendly_name: esp
+#  board: esp32dev
+#  project:
+#    name: esphome.fan
+#    version: "1.0"
+esp32:
+  board: esp32dev
+#  framework:
+#    type: esp-idf
+
+api:
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: {}
+captive_portal:
+web_server:
+  port: 80
+  version: 3
+  local: true
+
+logger:
+  level: DEBUG
+
+# Zeitsynchronisation über Home Assistant
+time:
+  - platform: sntp
+    timezone: Europe/Berlin
+    servers:
+      - 0.de.pool.ntp.org
+      - 0.europe.pool.ntp.org
+      - 1.europe.pool.ntp.org
+  - platform: homeassistant
+    id: ha_time
+    timezone: "Europe/Berlin"
+
+# I2C Bus für GY-6180 (BH1750)
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  id: bus_i2c
+
+# GY-6180 Lichtsensor (BH1750)
+sensor:
+  - platform: bh1750
+    address: 0x23
+    name: "Helligkeitssensor"
+    update_interval: 10s
+    #    resolution: 4 # 1-4 (0.5-16lx Auflösung)
+    id: bh1750_sensor
+
+# I2S-Mikrofon (INMP441)
+#i2s:
+#  bclk_pin: GPIO32
+#  lrclk_pin: GPIO33
+#  din_pin: GPIO25
+
+#microphone:
+#  - platform: i2s
+#    id: i2s_mic
+#    i2s_id: i2s
+#    adc_type: external
+#    pdm: false
+#    sample_rate: 16kHz
+
+# WS2812B LED-Matrix
+#output:
+#  - platform: ledc
+#    pin: GPIO16
+#    id: led_strip
+
+light:
+  - platform: neopixelbus
+    type: GRB
+    variant: WS2812
+    pin: GPIO16
+    num_leds: 192
+    name: "RGB Matrix"
+    #    brightness:
+    #      - lambda: |-
+    #          // Automatische Helligkeit (0-100%)
+    #          float lux = id(bh1750_sensor).state;
+    #          return (lux / 1000.0) * 100.0;  # 1000lx = 100% Helligkeit
+#    effects:
+#      - pulse:
+#          name: "Pulsieren"
+#      - lambda: |-
+#          // Uhrzeit-Anzeige
+#          auto time = id(ha_time).now();
+#          char time_str[6];
+#          strftime(time_str, sizeof(time_str), "%H:%M", time);
+
+#          // Matrix löschen
+#          for (int i = 0; i < 192; i++) {
+#            it.set_rgb(i, 0, 0, 0);
+#          }
+#
+#          // Hier Uhrzeit-Rendering implementieren
+#          it.schedule_show();
+#        name: "Uhrzeit"
+#        update_interval: 1s
+
+# Taster
+binary_sensor:
+  - platform: gpio
+    pin: GPIO17
+    name: "Button 1"
+  #    on_press:
+  #      - light.toggle: "RGB Matrix"
+
+  - platform: gpio
+    pin: GPIO18
+    name: "Button 2"
+#    on_press:
+#      - light.effect: "RGB Matrix"
