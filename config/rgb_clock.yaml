@@ -1,3 +1,12 @@
+substitutions:
+  pin_leds: GPIO17
+  pin_buzzer: GPIO16
+  pin_battery: GPIO34
+  pin_button_left: GPIO36
+  pin_button_right: GPIO35
+  pin_sda: GPIO21
+  pin_scl: GPIO22
+
 esphome:
   name: clock
   friendly_name: esp
@@ -60,8 +69,8 @@ time:
     id: time_rtc
 
 i2c:
-  sda: GPIO17
-  scl: GPIO16
+  sda: $pin_sda
+  scl: $pin_scl
   scan: true
   id: bus_i2c
 
@@ -165,7 +174,7 @@ display:
 
 ehmtxv2:
   id: rgb8x24
-  icons2html: true
+  #  icons2html: true
   matrix_component: display_ehmtx
   time_component: time_rtc
   time_format: "%H:%M"
@@ -179,30 +188,30 @@ ehmtxv2:
   icons:
     - id: error
       lameid: 40530
-    - id: home_assistant
-      lameid: 47693
-    - id: temperature
-      lameid: 2056
-    - id: lightbulb
-      lameid: 1762
-    - id: music
-      lameid: 45625
-    - id: ha
-      lameid: 7956
-    - id: tempc
-      lameid: 2422
-    - id: plug
-      lameid: 403
-    - id: humidity
-      lameid: 51764
-    - id: co2
-      lameid: 30662
-    - id: phone
-      lameid: 1232
-    - id: car
-      lameid: 2819
-    - id: sleep8x32
-      url: https://user-images.githubusercontent.com/16407309/224850723-634c9b2d-55d9-44f2-9f93-765c0485b090.gif
+  #    - id: home_assistant
+  #      lameid: 47693
+  #    - id: temperature
+  #      lameid: 2056
+  #    - id: lightbulb
+  #      lameid: 1762
+  #    - id: music
+  #      lameid: 45625
+  #    - id: ha
+  #      lameid: 7956
+  #    - id: tempc
+  #      lameid: 2422
+  #    - id: plug
+  #      lameid: 403
+  #    - id: humidity
+  #      lameid: 51764
+  #    - id: co2
+  #      lameid: 30662
+  #    - id: phone
+  #      lameid: 1232
+  #    - id: car
+  #      lameid: 2819
+  #    - id: sleep8x32
+  #      url: https://user-images.githubusercontent.com/16407309/224850723-634c9b2d-55d9-44f2-9f93-765c0485b090.gif
   on_next_screen:
     - homeassistant.event:
         event: esphome.new_screen
