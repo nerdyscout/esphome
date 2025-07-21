@@ -1,7 +1,8 @@
 substitutions:
   pin_leds: GPIO18
-  pin_buzzer: GPIO15
+  pin_buzzer: GPIO16
   pin_battery: GPIO34
+  pin_power: GPIO33
   pin_button_left: GPIO26
   pin_button_right: GPIO14
   pin_sda: GPIO21
@@ -96,23 +97,32 @@ sensor:
   #      name: "Pressure"
   #    humidity:
   #      name: "Humidity"
+  # Power
+  - platform: adc
+    pin: $pin_power
+    name: "VCC"
+    id: voltage_power
+    update_interval: 10s
+    device_class: power
+    accuracy_decimals: 2
+    attenuation: auto
   # Battery
   - platform: adc
     pin: $pin_battery
     name: "Battery"
-    id: battery_voltage
+    id: voltage_battery
     update_interval: 10s
     device_class: battery
     accuracy_decimals: 0
     attenuation: auto
-    filters:
-      - sliding_window_moving_average:
-          window_size: 15
-          send_every: 15
-          send_first_at: 1
-      - lambda: |-
-          return map(x, 0, 4096, 0, 100);
-    unit_of_measurement: "%"
+    #    filters:
+    #      - sliding_window_moving_average:
+    #          window_size: 6
+    #          send_every: 6
+    #          send_first_at: 1
+    #      - lambda: |-
+    #          return map(x, 0, 4096, 0, 100);
+#    unit_of_measurement: "%"
 
 # I2S-Mikrofon (INMP441)
 i2s_audio:
@@ -153,10 +163,10 @@ binary_sensor:
       - delayed_off: 10ms
 
 font:
-  # - file: Calcium.ttf
-  - file: mateine.ttf
+  - file: Calcium.ttf
+    #  - file: mateine.ttf
     #  - file: gfonts://Roboto
-    size: 8
+    size: 12
     id: default_font
 #    glyphs: |
 #      !?"%()+*=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnÖÄÜöäüopqrstuvwxyz@<>ß§€/
@@ -170,12 +180,12 @@ light:
     pin: $pin_leds
     num_leds: 192
     restore_mode: ALWAYS_OFF
-    on_turn_on:
-      lambda: |-
-        id(display_ehmtx)->set_enabled(false);
-    on_turn_off:
-      lambda: |-
-        id(display_ehmtx)->set_enabled(true);
+#    on_turn_on:
+#      lambda: |-
+#        id(display_ehmtx)->set_enabled(false);
+#    on_turn_off:
+#      lambda: |-
+#        id(display_ehmtx)->set_enabled(true);
 
 display:
   - platform: addressable_light
@@ -256,3 +266,25 @@ switch:
     turn_off_action:
       lambda: |-
         id(rgb8x24)->set_display_off();
+
+#number:
+#  - platform: template
+#    name: "$devicename brightness"
+#    id: screen_brightness
+#    min_value: 20
+#    max_value: 200
+#    update_interval: 1s
+#    step: 5
+#    lambda: |-
+#      return id(rgb8x24)->get_brightness();
+#    set_action:
+#      lambda: |-
+#        id(rgb8x24)->set_brightness(x);
+
+output:
+  - platform: ledc
+    pin: $pin_buzzer
+    id: out_buzzer
+
+rtttl:
+  output: out_buzzer
