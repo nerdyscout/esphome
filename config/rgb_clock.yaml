@@ -76,18 +76,18 @@ i2c:
 
 # GY-6180 Lichtsensor (BH1750)
 sensor:
-  - platform: bh1750
-    address: 0x23
-    name: "Light Sensor"
-    update_interval: 10s
-    id: bh1750_sensor
-  - platform: bme280_i2c
-    temperature:
-      name: "Temperature"
-    pressure:
-      name: "Pressure"
-    humidity:
-      name: "Humidity"
+  #  - platform: bh1750
+  #    address: 0x23
+  #    name: "Light Sensor"
+  #    update_interval: 10s
+  #    id: bh1750_sensor
+  #  - platform: bme280_i2c
+  #    temperature:
+  #      name: "Temperature"
+  #    pressure:
+  #      name: "Pressure"
+  #    humidity:
+  #      name: "Humidity"
   - platform: adc
     pin: GPIO33
     name: "Battery"
@@ -107,15 +107,15 @@ sensor:
     unit_of_measurement: "%"
 
 # I2S-Mikrofon (INMP441)
-i2s_audio:
-  i2s_lrclk_pin: GPIO25
-  i2s_bclk_pin: GPIO26
-  i2s_mclk_pin: GPIO32
-microphone:
-  - platform: i2s_audio
-    id: external_mic
-    adc_type: external
-    i2s_din_pin: GPIO27
+#i2s_audio:
+#  i2s_lrclk_pin: GPIO25
+#  i2s_bclk_pin: GPIO26
+#  i2s_mclk_pin: GPIO32
+#microphone:
+#  - platform: i2s_audio
+#    id: external_mic
+#    adc_type: external
+#    i2s_din_pin: GPIO27
 
 light:
   - platform: neopixelbus
@@ -136,16 +136,26 @@ light:
 # Taster
 binary_sensor:
   - platform: gpio
-    pin: GPIO34
     name: "Button Left"
-  #    on_press:
-  #      - light.toggle: "RGB Matrix"
+    pin:
+      number: $pin_button_left
+    #      mode:
+    #        input: true
+    #        pullup: true
+    filters:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
 
   - platform: gpio
-    pin: GPIO35
     name: "Button Right"
-#    on_press:
-#      - light.effect: "RGB Matrix"
+    pin:
+      number: $pin_button_right
+    #      mode:
+    #        input: true
+    #        pullup: true
+    filters:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
 
 font:
   - file: gfonts://Roboto
@@ -169,8 +179,10 @@ display:
     update_interval: 16ms
     auto_clear_enabled: true
     lambda: |-
-      id(rgb8x24)->tick();
-      id(rgb8x24)->draw();
+      Color red = Color(0xFF0000);
+      it.rectangle(0, 0, 3, 2, red);
+#      id(rgb8x24)->tick();
+#      id(rgb8x24)->draw();
 
 ehmtxv2:
   id: rgb8x24
