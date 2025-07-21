@@ -1,8 +1,8 @@
 substitutions:
   pin_leds: GPIO18
   pin_buzzer: GPIO16
-  pin_battery: GPIO34
-  pin_power: GPIO33
+  pin_battery: GPIO33
+  pin_power: GPIO34
   pin_button_left: GPIO26
   pin_button_right: GPIO14
   pin_sda: GPIO21
@@ -100,7 +100,7 @@ sensor:
   # Power
   - platform: adc
     pin: $pin_power
-    name: "VCC"
+    name: "Power Voltage"
     id: voltage_power
     update_interval: 10s
     device_class: power
@@ -109,21 +109,20 @@ sensor:
   # Battery
   - platform: adc
     pin: $pin_battery
-    name: "Battery"
+    name: "Power Battery"
     id: voltage_battery
     update_interval: 10s
     device_class: battery
     accuracy_decimals: 0
     attenuation: auto
-    #    filters:
-    #      - sliding_window_moving_average:
-    #          window_size: 6
-    #          send_every: 6
-    #          send_first_at: 1
-    #      - lambda: |-
-    #          return map(x, 0, 4096, 0, 100);
+    filters:
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 6
+          send_first_at: 1
+      - lambda: |-
+          return map(3.3/x, 0, 4096, 0, 100);
 #    unit_of_measurement: "%"
-
 # I2S-Mikrofon (INMP441)
 i2s_audio:
   i2s_lrclk_pin: $mic_lrclk_pin # The GPIO pin to use for the I²S LRCLK (Left/Right Clock) signal, also referred to as WS (Word Select) or FS (Frame Sync).
@@ -166,8 +165,8 @@ font:
   - file: Calcium.ttf
     #  - file: mateine.ttf
     #  - file: gfonts://Roboto
-    size: 12
-    id: default_font
+    size: 16
+    id: font_default
 #    glyphs: |
 #      !?"%()+*=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnÖÄÜöäüopqrstuvwxyz@<>ß§€/
 
@@ -180,12 +179,12 @@ light:
     pin: $pin_leds
     num_leds: 192
     restore_mode: ALWAYS_OFF
-#    on_turn_on:
-#      lambda: |-
-#        id(display_ehmtx)->set_enabled(false);
-#    on_turn_off:
-#      lambda: |-
-#        id(display_ehmtx)->set_enabled(true);
+    on_turn_on:
+      lambda: |-
+        id(display_ehmtx)->set_enabled(true);
+    on_turn_off:
+      lambda: |-
+        id(display_ehmtx)->set_enabled(false);
 
 display:
   - platform: addressable_light
@@ -194,16 +193,13 @@ display:
     width: 24
     height: 8
     pixel_mapper: |-
-      return (x * 8) + y;
+      return 192-(x * 8) + y;
     rotation: 0
     update_interval: 16ms
     auto_clear_enabled: true
     lambda: |-
-      Color red = Color(0xFF0000);
-      it.rectangle(0, 0, 3, 2, red);
-      it.print(0, 0, id(default_font), "HALLO");
-#      Color green = Color(0x00FF00);
-#      it.rectangle(4, 4, 24, 8, green);
+      id(rgb8x24)->tick();
+      id(rgb8x24)->draw();
 
 ehmtxv2:
   id: rgb8x24
@@ -214,17 +210,17 @@ ehmtxv2:
   date_format: "%d.%m."
   show_seconds: false
   week_start_monday: true # default monday is first day of week, false = sunday
-  default_font_id: default_font
+  default_font_id: font_default
   default_font_yoffset: 0
-  special_font_id: default_font
+  special_font_id: font_default
   special_font_yoffset: 0
   icons:
     - id: error
       lameid: 40530
-  #    - id: home_assistant
-  #      lameid: 47693
-  #    - id: temperature
-  #      lameid: 2056
+    - id: home_assistant
+      lameid: 47693
+    - id: temperature
+      lameid: 2056
   #    - id: lightbulb
   #      lameid: 1762
   #    - id: music
@@ -267,19 +263,19 @@ switch:
       lambda: |-
         id(rgb8x24)->set_display_off();
 
-#number:
-#  - platform: template
-#    name: "$devicename brightness"
-#    id: screen_brightness
-#    min_value: 20
-#    max_value: 200
-#    update_interval: 1s
-#    step: 5
-#    lambda: |-
-#      return id(rgb8x24)->get_brightness();
-#    set_action:
-#      lambda: |-
-#        id(rgb8x24)->set_brightness(x);
+number:
+  - platform: template
+    name: "Brightness"
+    id: display_brightness
+    min_value: 20
+    max_value: 200
+    update_interval: 1s
+    step: 5
+    lambda: |-
+      return id(rgb8x24)->get_brightness();
+    set_action:
+      lambda: |-
+        id(rgb8x24)->set_brightness(x);
 
 output:
   - platform: ledc
