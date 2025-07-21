@@ -6,9 +6,8 @@ substitutions:
   pin_button_right: GPIO14
   pin_sda: GPIO21
   pin_scl: GPIO22
-  mic_lrclk_pin: GPIO20 # left/right --> GND
-  mic_bclk_pin: GPIO25 #
-  mic_mclk_pin: GPIO33 #
+  mic_lrclk_pin: GPIO25 # left/right --> GND
+  mic_bclk_pin: GPIO27 # CLK
   mic_din_pin: GPIO32 # SD
 
 esphome:
@@ -111,21 +110,22 @@ sensor:
           window_size: 15
           send_every: 15
           send_first_at: 1
-      #      - multiply: 1.6
       - lambda: |-
-          return map(x, 0.0, 4096, 0.0, 100.0);
+          return map(x, 0, 4096, 0, 100);
     unit_of_measurement: "%"
 
 # I2S-Mikrofon (INMP441)
 i2s_audio:
   i2s_lrclk_pin: $mic_lrclk_pin # The GPIO pin to use for the I²S LRCLK (Left/Right Clock) signal, also referred to as WS (Word Select) or FS (Frame Sync).
   i2s_bclk_pin: $mic_bclk_pin # The GPIO pin to use for the I²S BCLK (Bit Clock) signal, also referred to as SCK (Serial Clock).
-  i2s_mclk_pin: $mic_mclk_pin # The GPIO pin to use for the I²S MCLK (Master Clock) signal.
+#  i2s_mclk_pin: $mic_mclk_pin # The GPIO pin to use for the I²S MCLK (Master Clock) signal.
 microphone:
   - platform: i2s_audio
-    id: external_mic
+    id: mic_external
     adc_type: external
     i2s_din_pin: $mic_din_pin # The GPIO pin to use for the I²S DIN/SDIN (Data In) signal, also referred to as SD/SDATA (Serial Data) or ADCDAT (Analog to Digital Converter Data).
+voice_assistant:
+  microphone: mic_external
 
 # Taster
 binary_sensor:
