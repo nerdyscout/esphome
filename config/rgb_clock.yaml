@@ -1,9 +1,9 @@
 substitutions:
-  pin_leds: GPIO17
-  pin_buzzer: GPIO16
-  pin_battery: GPIO33
-  pin_button_left: GPIO09
-  pin_button_right: GPIO10
+  pin_leds: GPIO32
+  pin_buzzer: GPIO15
+  pin_battery: GPIO34
+  pin_button_left: GPIO26
+  pin_button_right: GPIO14
   pin_sda: GPIO21
   pin_scl: GPIO22
 # pin_i2s_lrclk
@@ -111,10 +111,10 @@ sensor:
           window_size: 15
           send_every: 15
           send_first_at: 1
-#      - multiply: 1.6
-#      - lambda: |-
-#          return ((x - 3) / 0.69 * 100.00);
-#    unit_of_measurement: "%"
+      #      - multiply: 1.6
+      - lambda: |-
+          return map(x, 0.0, 4096, 0.0, 100.0);
+    unit_of_measurement: "%"
 
 # I2S-Mikrofon (INMP441)
 #i2s_audio:
@@ -133,9 +133,10 @@ binary_sensor:
     name: "Button Left"
     pin:
       number: $pin_button_left
-    #      mode:
-    #        input: true
-    #        pullup: true
+      inverted: true
+      mode:
+        input: true
+        pullup: true
     filters:
       - delayed_on: 10ms
       - delayed_off: 10ms
@@ -143,9 +144,10 @@ binary_sensor:
     name: "Button Right"
     pin:
       number: $pin_button_right
-    #      mode:
-    #        input: true
-    #        pullup: true
+      inverted: true
+      mode:
+        input: true
+        pullup: true
     filters:
       - delayed_on: 10ms
       - delayed_off: 10ms
