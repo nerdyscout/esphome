@@ -1,5 +1,5 @@
 substitutions:
-  pin_leds: GPIO17
+  pin_leds: GPIO23
   pin_buzzer: GPIO16
   pin_battery: GPIO34
   pin_button_left: GPIO36
@@ -76,6 +76,14 @@ i2c:
 
 # GY-6180 Lichtsensor (BH1750)
 sensor:
+  - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+  - platform: uptime
+    type: seconds
+    name: Uptime Sensor
   #  - platform: bh1750
   #    address: 0x23
   #    name: "Light Sensor"
@@ -88,23 +96,23 @@ sensor:
   #      name: "Pressure"
   #    humidity:
   #      name: "Humidity"
-  - platform: adc
-    pin: GPIO33
-    name: "Battery"
-    id: battery_voltage
-    update_interval: 10s
-    device_class: battery
-    accuracy_decimals: 0
-    attenuation: auto
-    filters:
-      - sliding_window_moving_average:
-          window_size: 15
-          send_every: 15
-          send_first_at: 1
-      - multiply: 1.6
-      - lambda: |-
-          return ((x - 3) / 0.69 * 100.00);
-    unit_of_measurement: "%"
+#  - platform: adc
+#    pin: GPIO33
+#    name: "Battery"
+#    id: battery_voltage
+#    update_interval: 10s
+#    device_class: battery
+#    accuracy_decimals: 0
+#    attenuation: auto
+#    filters:
+#      - sliding_window_moving_average:
+#          window_size: 15
+#          send_every: 15
+#          send_first_at: 1
+#      - multiply: 1.6
+#      - lambda: |-
+#          return ((x - 3) / 0.69 * 100.00);
+#    unit_of_measurement: "%"
 
 # I2S-Mikrofon (INMP441)
 #i2s_audio:
@@ -123,7 +131,7 @@ light:
     #    name: "RGB Matrix"
     type: GRB
     variant: WS2812
-    pin: GPIO23
+    pin: $pin_leds
     num_leds: 192
     restore_mode: ALWAYS_OFF
     on_turn_on:
@@ -159,7 +167,7 @@ binary_sensor:
 
 font:
   - file: gfonts://Roboto
-    size: 16
+    size: 32
     id: default_font
 #    glyphs: |
 #      !?"%()+*=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnÖÄÜöäüopqrstuvwxyz@<>ß§€/
@@ -171,18 +179,16 @@ display:
     width: 24
     height: 8
     pixel_mapper: |-
-      if (y % 2 == 0) {
-        return (y * 24) + x;
-      }
-      return (y * 24) + (23 - x);
-    rotation: 90°
+      return (x * 8) + y;
+    rotation: 0°
     update_interval: 16ms
     auto_clear_enabled: true
     lambda: |-
       Color red = Color(0xFF0000);
       it.rectangle(0, 0, 3, 2, red);
-#      id(rgb8x24)->tick();
-#      id(rgb8x24)->draw();
+      it.print(0, 0, id(default_font), "HALLO");
+#      Color green = Color(0x00FF00);
+#      it.rectangle(4, 4, 24, 8, green);
 
 ehmtxv2:
   id: rgb8x24
