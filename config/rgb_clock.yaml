@@ -48,7 +48,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/lubeda/EspHoMaTriXv2
-      ref: 2025.5.1
+      ref: 2025.5.2
     refresh: 60s
     components: [ehmtxv2]
 
@@ -75,7 +75,8 @@ i2c:
   id: bus_i2c
 
 sensor:
-  - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
+  # Reports the WiFi signal strength/RSSI in dB
+  - platform: wifi_signal
     name: "WiFi Signal dB"
     id: wifi_signal_db
     update_interval: 60s
@@ -83,20 +84,17 @@ sensor:
   - platform: uptime
     type: seconds
     name: Uptime Sensor
-  # GY-6180 Lichtsensor (BH1750)
-  #  - platform: bh1750
-  #    address: 0x23
-  #    name: "Light Sensor"
-  #    update_interval: 10s
-  #    id: bh1750_sensor
   # Env Sensor (BME280)
-  #  - platform: bme280_i2c
-  #    temperature:
-  #      name: "Temperature"
-  #    pressure:
-  #      name: "Pressure"
-  #    humidity:
-  #      name: "Humidity"
+  - platform: bme280_i2c
+    id: bme
+    address: 0x76
+    temperature:
+      name: "Temperature"
+    pressure:
+      name: "Pressure"
+    humidity:
+      name: "Humidity"
+
   # Power
   - platform: adc
     pin: $pin_power
@@ -104,7 +102,7 @@ sensor:
     id: voltage_power
     update_interval: 10s
     device_class: power
-    accuracy_decimals: 2
+    accuracy_decimals: 1
     attenuation: auto
   # Battery
   - platform: adc
@@ -113,15 +111,30 @@ sensor:
     id: voltage_battery
     update_interval: 10s
     device_class: battery
-    accuracy_decimals: 0
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
     attenuation: auto
     filters:
+      - multiply: 3.1277 # Voltage divider compensation (147k/47k = 3.1277 + tolerance)
       - sliding_window_moving_average:
-          window_size: 6
-          send_every: 6
-          send_first_at: 1
-      - lambda: |-
-          return map(3.3/x, 0, 4096, 0, 100);
+          window_size: 10
+          send_every: 5
+          send_first_at: 3
+#  - platform: template
+#    name: "Power Battery Percentage"
+#    id: battery_percentage
+#    unit_of_measurement: "%"
+#    accuracy_decimals: 0
+#    update_interval: 30s
+#    lambda: |-
+#      float voltage = id(voltage_battery).state;
+#      // For two 18650 cells in series:
+#      // Empty voltage ~6.0V (0%)
+#      // Full voltage ~8.4V (100%)
+#      if (voltage >= 8.4) return 100;
+#      if (voltage <= 6.0) return 0;
+#      return (voltage - 6.0) / (8.4 - 6.0) * 100.0;
+
 #    unit_of_measurement: "%"
 # I2S-Mikrofon (INMP441)
 i2s_audio:
@@ -178,7 +191,7 @@ light:
     variant: WS2812
     pin: $pin_leds
     num_leds: 192
-    restore_mode: ALWAYS_OFF
+    #    restore_mode: ALWAYS_OFF
     on_turn_on:
       lambda: |-
         id(display_ehmtx)->set_enabled(true);
@@ -211,9 +224,10 @@ ehmtxv2:
   show_seconds: false
   week_start_monday: true # default monday is first day of week, false = sunday
   default_font_id: font_default
-  default_font_yoffset: 0
+  default_font_yoffset: 8
   special_font_id: font_default
-  special_font_yoffset: 0
+  special_font_yoffset: 8
+  brightness: 80 # percent
   icons:
     - id: error
       lameid: 40530
@@ -241,12 +255,12 @@ ehmtxv2:
   #      lameid: 2819
   #    - id: sleep8x32
   #      url: https://user-images.githubusercontent.com/16407309/224850723-634c9b2d-55d9-44f2-9f93-765c0485b090.gif
-  on_next_screen:
-    - homeassistant.event:
-        event: esphome.new_screen
-        data_template:
-          iconname: !lambda "return icon.c_str();"
-          text: !lambda "return text.c_str();"
+#  on_next_screen:
+#    - homeassistant.event:
+#        event: esphome.new_screen
+#        data_template:
+#          iconname: !lambda "return icon.c_str();"
+#          text: !lambda "return text.c_str();"
 
 switch:
   - platform: template
@@ -269,12 +283,13 @@ number:
     id: display_brightness
     min_value: 20
     max_value: 200
-    update_interval: 1s
+    #    update_interval: 1s
     step: 5
     lambda: |-
       return id(rgb8x24)->get_brightness();
     set_action:
       lambda: |-
+        id(rgb8x24)->set_display_on();
         id(rgb8x24)->set_brightness(x);
 
 output:
