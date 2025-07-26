@@ -13,6 +13,7 @@ substitutions:
 
 esphome:
   name: clock
+  #  comment:
   friendly_name: esp
   name_add_mac_suffix: true
   project:
@@ -26,6 +27,28 @@ esp32:
   board: esp32dev
 
 api:
+#  services:
+#    - service: alarm
+#      variables:
+#        icon_name: string
+#        message: string
+#      then:
+#        lambda: |-
+#          id(rgb8x24)->add_screen(icon_name,text,7,20,true);
+#          id(rgb8x24)->force_screen(icon_name);
+#    - service: brightness
+#      variables:
+#        brightness: int
+#      then:
+#        lambda: |-
+#          id(rgb8x24)->set_brightness(brightness);
+#    - service: tuneplay
+#      variables:
+#        tune: string
+#      then:
+#        - rtttl.play:
+#            rtttl: !lambda "return tune;"
+
 ota:
   - platform: esphome
     password: !secret ota_password
@@ -41,8 +64,9 @@ web_server:
   version: 3
   local: true
 
+debug:
 logger:
-  level: DEBUG
+  level: VERBOSE
 
 external_components:
   - source:
@@ -51,6 +75,12 @@ external_components:
       ref: 2025.5.2
     refresh: 60s
     components: [ehmtxv2]
+
+globals:
+  - id: night_mode
+    type: "bool"
+    restore_value: true
+    initial_value: "false"
 
 # Zeitsynchronisation
 time:
@@ -65,14 +95,31 @@ time:
       then:
         ds1307.write_time:
   - platform: ds1307
-    update_interval: never
     id: time_rtc
+    timezone: Europe/Berlin
+    update_interval: never
+    on_time:
+      # Every morning
+      - seconds: 0
+        hours: 7
+        minutes: 30
+        then:
+          - lambda: |
+              id(night_mode) = false;
+      # Every morning
+      - seconds: 0
+        hours: 21
+        minutes: 30
+        then:
+          - lambda: |-
+              id(night_mode) = true;
 
 i2c:
   sda: $pin_sda
   scl: $pin_scl
   scan: true
-  id: bus_i2c
+#  id: bus_i2c
+#  frequency: 10kHz
 
 sensor:
   # Reports the WiFi signal strength/RSSI in dB
@@ -137,17 +184,17 @@ sensor:
 
 #    unit_of_measurement: "%"
 # I2S-Mikrofon (INMP441)
-i2s_audio:
-  i2s_lrclk_pin: $mic_lrclk_pin # The GPIO pin to use for the I²S LRCLK (Left/Right Clock) signal, also referred to as WS (Word Select) or FS (Frame Sync).
-  i2s_bclk_pin: $mic_bclk_pin # The GPIO pin to use for the I²S BCLK (Bit Clock) signal, also referred to as SCK (Serial Clock).
-#  i2s_mclk_pin: $mic_mclk_pin # The GPIO pin to use for the I²S MCLK (Master Clock) signal.
-microphone:
-  - platform: i2s_audio
-    id: mic_external
-    adc_type: external
-    i2s_din_pin: $mic_din_pin # The GPIO pin to use for the I²S DIN/SDIN (Data In) signal, also referred to as SD/SDATA (Serial Data) or ADCDAT (Analog to Digital Converter Data).
-voice_assistant:
-  microphone: mic_external
+#i2s_audio:
+#  i2s_lrclk_pin: $mic_lrclk_pin # The GPIO pin to use for the I²S LRCLK (Left/Right Clock) signal, also referred to as WS (Word Select) or FS (Frame Sync).
+#  i2s_bclk_pin: $mic_bclk_pin # The GPIO pin to use for the I²S BCLK (Bit Clock) signal, also referred to as SCK (Serial Clock).
+##  i2s_mclk_pin: $mic_mclk_pin # The GPIO pin to use for the I²S MCLK (Master Clock) signal.
+#microphone:
+#  - platform: i2s_audio
+#    id: mic_external
+#    adc_type: external
+#    i2s_din_pin: $mic_din_pin # The GPIO pin to use for the I²S DIN/SDIN (Data In) signal, also referred to as SD/SDATA (Serial Data) or ADCDAT (Analog to Digital Converter Data).
+#voice_assistant:
+#  microphone: mic_external
 
 # Taster
 binary_sensor:
@@ -162,6 +209,10 @@ binary_sensor:
     filters:
       - delayed_on: 10ms
       - delayed_off: 10ms
+  #    on_press:
+  #      then:
+  #        - ehmtxv2.previous_screen: rgb8x24
+
   - platform: gpio
     name: "Button Right"
     pin:
@@ -173,12 +224,15 @@ binary_sensor:
     filters:
       - delayed_on: 10ms
       - delayed_off: 10ms
+#    on_press:
+#      then:
+#        - ehmtxv2.next_screen: rgb8x24
 
 font:
-  - file: Calcium.ttf
-    #  - file: mateine.ttf
+  #  - file: Calcium.ttf
+  - file: mateine.ttf
     #  - file: gfonts://Roboto
-    size: 16
+    size: 12
     id: font_default
 #    glyphs: |
 #      !?"%()+*=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnÖÄÜöäüopqrstuvwxyz@<>ß§€/
@@ -191,13 +245,19 @@ light:
     variant: WS2812
     pin: $pin_leds
     num_leds: 192
-    #    restore_mode: ALWAYS_OFF
+    color_correct: [30%, 30%, 30%]
+    restore_mode: ALWAYS_OFF
     on_turn_on:
       lambda: |-
         id(display_ehmtx)->set_enabled(true);
     on_turn_off:
       lambda: |-
         id(display_ehmtx)->set_enabled(false);
+#    effects:
+#      - wled:
+
+# external components for LED effects
+#wled:
 
 display:
   - platform: addressable_light
@@ -206,14 +266,15 @@ display:
     width: 24
     height: 8
     pixel_mapper: |-
-      return 192-(x * 8) + y;
+      return (x * 8) + y;
     rotation: 0
     update_interval: 16ms
     auto_clear_enabled: true
     lambda: |-
       id(rgb8x24)->tick();
       id(rgb8x24)->draw();
-
+#      it.rectangle(2, 3, 4, 5);
+#      it.print(1, -2, id(font_default), "Hello");
 ehmtxv2:
   id: rgb8x24
   #  icons2html: true
@@ -224,10 +285,10 @@ ehmtxv2:
   show_seconds: false
   week_start_monday: true # default monday is first day of week, false = sunday
   default_font_id: font_default
-  default_font_yoffset: 8
+  default_font_yoffset: 2
   special_font_id: font_default
-  special_font_yoffset: 8
-  brightness: 80 # percent
+  special_font_yoffset: 2
+  brightness: 30
   icons:
     - id: error
       lameid: 40530
@@ -253,21 +314,42 @@ ehmtxv2:
   #      lameid: 1232
   #    - id: car
   #      lameid: 2819
-  #    - id: sleep8x32
+  #    - id: sleep8x24
   #      url: https://user-images.githubusercontent.com/16407309/224850723-634c9b2d-55d9-44f2-9f93-765c0485b090.gif
-#  on_next_screen:
-#    - homeassistant.event:
-#        event: esphome.new_screen
-#        data_template:
-#          iconname: !lambda "return icon.c_str();"
-#          text: !lambda "return text.c_str();"
+  #  on_next_screen:
+  #    - homeassistant.event:
+  #        event: esphome.new_screen
+  #        data_template:
+  #          iconname: !lambda "return icon.c_str();"
+  #          text: !lambda "return text.c_str();"
+#  on_empty_queue:
+#    then:
+#      lambda: |-
+#        if (id(night_mode)){
+#            id(rgb8x24)->clock_screen(10,10,true,140,120,120);
+#            id(rgb8x24)->date_screen(10,5,true,120,200,150);
+#        } else {
+#          id(rgb8x24)->blank_screen(1,15);
+#        }
+# https://github.com/lubeda/EspHoMaTriXv2/issues/190
+#  on_night_mode:
+#    then:
+#      lambda: |-
+#        if (state) {
+#            id(aab_enable) = false;
+#            id(rgb8x24)->set_brightness(20);
+#            id(rgb8x24)->set_clock_color(235, 0, 0);
+#        } else {
+#            id(aab_enable) = true;
+#            id(rgb8x24)->set_clock_color(255, 255, 255);
+#        }
 
 switch:
   - platform: template
     name: "Display"
     id: displaycontrol
     icon: "mdi:power"
-    restore_mode: ALWAYS_ON
+    restore_mode: RESTORE_DEFAULT_ON
     lambda: |-
       return id(rgb8x24)->show_display;
     turn_on_action:
@@ -281,21 +363,21 @@ number:
   - platform: template
     name: "Brightness"
     id: display_brightness
-    min_value: 20
-    max_value: 200
-    #    update_interval: 1s
+    min_value: 30
+    max_value: 150
+    update_interval: 1s
     step: 5
-    lambda: |-
-      return id(rgb8x24)->get_brightness();
-    set_action:
+    optimistic: true
+    #    lambda: |-
+    #      return id(rgb8x24)->get_brightness();
+    on_value:
       lambda: |-
-        id(rgb8x24)->set_display_on();
         id(rgb8x24)->set_brightness(x);
 
-output:
-  - platform: ledc
-    pin: $pin_buzzer
-    id: out_buzzer
+#output:
+#  - platform: ledc
+#    pin: $pin_buzzer
+#    id: out_buzzer
 
-rtttl:
-  output: out_buzzer
+#rtttl:
+#  output: out_buzzer
