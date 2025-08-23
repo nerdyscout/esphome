@@ -1,0 +1,416 @@
+substitutions:
+  pin_leds: GPIO18
+  pin_buzzer: GPIO16
+  pin_battery: GPIO33
+  pin_button_left: GPIO26
+  pin_button_right: GPIO14
+  pin_sda: GPIO21
+  pin_scl: GPIO22
+  mic_lrclk_pin: GPIO25 # left/right --> GND
+  mic_bclk_pin: GPIO27 # CLK
+  mic_din_pin: GPIO32 # SD
+#  mic_mclk_pin: undefiend
+
+esphome:
+  name: esp
+  name_add_mac_suffix: true
+  # comment:
+  friendly_name: clock
+  project:
+    name: nerdyscout.clock
+    version: "0.1.0"
+  on_boot:
+    then:
+      ds1307.read_time:
+
+esp32:
+  board: esp32dev
+
+api:
+  services:
+    # - service: alarm
+    #   variables:
+    #     icon_name: string
+    #     message: string
+    #   then:
+    #     lambda: |-
+    #       id(rgb8x24)->add_screen(icon_name,text,7,20,true);
+    #       id(rgb8x24)->force_screen(icon_name);
+    - service: brightness
+      variables:
+        brightness: int
+      then:
+        lambda: |-
+          if (brightness >= 50 && brightness <= 150) {
+            id(rgb8x24)->set_brightness(brightness);
+          }
+    - service: tuneplay
+      variables:
+        tune: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda "return tune;"
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+dashboard_import:
+  package_import_url: github://nerdyscout/esphome/blob/config/clock/config/rgb_clock.yaml@v1
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: false
+  ap: {}
+captive_portal:
+web_server:
+  port: 80
+  version: 3
+  local: true
+  sorting_groups:
+    - id: sorting_group_diagnostic
+      name: "Diagnostic"
+      sorting_weight: 50
+
+safe_mode:
+  num_attempts: 5
+debug:
+logger:
+  level: DEBUG
+
+external_components:
+  - source:
+      # type: git
+      # url: https://github.com/lubeda/EspHoMaTriXv2
+      type: local
+      path: components/ehmtxv2/components
+    #      ref: 2025.5.2
+    refresh: 60s
+    components: [ehmtxv2]
+
+globals:
+  # aab = auto-adjustable brightness
+  - id: aab_enable
+    type: "bool"
+    restore_value: true
+    initial_value: "true"
+
+# Zeitsynchronisation
+time:
+  - platform: sntp
+    id: time_ntp
+    timezone: Europe/Berlin
+    servers:
+      - 0.de.pool.ntp.org
+      - 0.europe.pool.ntp.org
+      - 1.europe.pool.ntp.org
+    on_time_sync:
+      then:
+        ds1307.write_time:
+  - platform: ds1307
+    id: time_rtc
+    i2c_id: i2c_rtc
+    timezone: Europe/Berlin
+    update_interval: never
+
+i2c:
+  - id: i2c_rtc
+    sda: $pin_sda
+    scl: $pin_scl
+  #  scan: true
+  - id: i2c_bme
+    sda: 14
+    scl: 26
+
+text_sensor:
+  - platform: uptime
+    name: Uptime
+    entity_category: "diagnostic"
+    icon: mdi:clock-outline
+
+sensor:
+  # Reports the WiFi signal strength/RSSI in dB
+  - platform: wifi_signal
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+    icon: mdi:wifi
+  # Env Sensor (BME280)
+  - platform: bme280_i2c
+    i2c_id: i2c_bme
+    id: bme
+    address: 0x76
+    temperature:
+      name: "Temperature"
+      id: bme_temperature
+      icon: mdi:thermometer
+    pressure:
+      name: "Pressure"
+      icon: mdi:gauge
+    humidity:
+      name: "Humidity"
+      id: bme_humidity
+      icon: mdi:water-percent
+
+  # Battery
+  - platform: adc
+    pin: $pin_battery
+    name: "Battery"
+    id: voltage_battery
+    update_interval: 10s
+    device_class: battery
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    attenuation: auto
+    icon: "mdi:battery-medium"
+    filters:
+      - multiply: 3.1277 # Voltage divider compensation (147k/47k = 3.1277 + tolerance)
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 5
+          send_first_at: 3
+    web_server:
+      sorting_group_id: sorting_group_diagnostic
+
+#  - platform: template
+#    name: "Power Battery Percentage"
+#    id: battery_percentage
+#    unit_of_measurement: "%"
+#    accuracy_decimals: 0
+#    update_interval: 30s
+#    lambda: |-
+#      float voltage = id(voltage_battery).state;
+#      // For two 18650 cells in series:
+#      // Empty voltage ~6.0V (0%)
+#      // Full voltage ~8.4V (100%)
+#      if (voltage >= 8.4) return 100;
+#      if (voltage <= 6.0) return 0;
+#      return (voltage - 6.0) / (8.4 - 6.0) * 100.0;
+#    unit_of_measurement: "%"
+
+# I2S-Mikrofon (INMP441)
+i2s_audio:
+  i2s_lrclk_pin: $mic_lrclk_pin # The GPIO pin to use for the I²S LRCLK (Left/Right Clock) signal, also referred to as WS (Word Select) or FS (Frame Sync).
+  i2s_bclk_pin: $mic_bclk_pin # The GPIO pin to use for the I²S BCLK (Bit Clock) signal, also referred to as SCK (Serial Clock).
+#  i2s_mclk_pin: $mic_mclk_pin # The GPIO pin to use for the I²S MCLK (Master Clock) signal.
+microphone:
+  - platform: i2s_audio
+    id: mic_external
+    adc_type: external
+    i2s_din_pin: $mic_din_pin # The GPIO pin to use for the I2S DIN/SDIN (Data In) signal, also referred to as SD/SDATA (Serial Data) or ADCDAT (Analog to Digital Converter Data).
+voice_assistant:
+  microphone: mic_external
+
+# Buttons
+# binary_sensor:
+#   - platform: gpio
+#     # name: "Button Left"
+#     id: button_left
+#     pin:
+#       number: $pin_button_left
+#       inverted: true
+#       mode:
+#         input: true
+#         pullup: true
+#     filters:
+#       - delayed_on: 10ms
+#       - delayed_off: 10ms
+
+#   - platform: gpio
+#     # name: "Button Right"
+#     id: button_right
+#     pin:
+#       number: $pin_button_right
+#       inverted: true
+#       mode:
+#         input: true
+#         pullup: true
+#     filters:
+#       - delayed_on: 10ms
+#       - delayed_off: 10ms
+
+font:
+  - file: mateine.ttf
+    size: 16
+    id: font_mateine
+    glyphs: '!?"%()+*=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyzÖÄÜöäü@<>ß§€/'
+
+light:
+  - platform: neopixelbus
+    id: light_ehmtx
+    name: Display
+    type: GRB
+    variant: WS2812
+    pin: $pin_leds
+    num_leds: 192
+    color_correct: [30%, 30%, 30%]
+    restore_mode: ALWAYS_OFF
+    icon: mdi:power
+    on_turn_on:
+      lambda: |-
+        id(display_ehmtx)->set_enabled(true);
+    on_turn_off:
+      lambda: |-
+        id(display_ehmtx)->set_enabled(false);
+
+display:
+  - platform: addressable_light
+    id: display_ehmtx
+    addressable_light_id: light_ehmtx
+    width: 24
+    height: 8
+    pixel_mapper: |-
+      return (23-x) * 8 + y;
+    rotation: 0
+    update_interval: 16ms
+    auto_clear_enabled: true
+    lambda: |-
+      id(rgb8x24)->tick();
+      id(rgb8x24)->draw();
+
+ehmtxv2:
+  id: rgb8x24
+  matrix_component: display_ehmtx
+  time_component: time_rtc
+  time_format: "%H:%M"
+  date_format: "%d.%m."
+  show_seconds: false
+  week_start_monday: true
+  default_font_id: font_mateine
+  default_font_yoffset: 8
+  special_font_id: font_mateine
+  special_font_yoffset: 6
+  show_dow: false
+  brightness: 100
+  icons:
+    - id: error
+      lameid: 40530
+    # - id: home_assistant
+    #   lameid: 47693
+    #- id: temperature
+    #  lameid: 2056
+    # - id: humidity
+    #   lameid: 51764
+    # - id: weather_clear_night
+    #   lameid: 53383
+    # - id: weather_cloudy
+    #   frame_duration: 192
+    #   lameid: 25991
+    # - id: weather_exceptional
+    #   lameid: 16754
+    # - id: weather_fog
+    #   lameid: 52167
+    # - id: weather_hail
+    #   lameid: 53288
+    # - id: weather_lightning
+    #   lameid: 23713
+    # - id: weather_lightning_rainy
+    #   lameid: 49299
+    # - id: weather_partlycloudy
+    #   frame_duration: 210
+    #   lameid: 22160
+    # - id: weather_pouring
+    #   lameid: 49300
+    # - id: weather_rainy
+    #   lameid: 26565
+    # - id: weather_snowy
+    #   lameid: 2289
+    # - id: weather_snowy_rainy
+    #   lameid: 49301
+    # - id: weather_sunny
+    #   lameid: 11201
+    # - id: weather_windy
+    #   lameid: 15618
+    # - id: weather_windy_variant
+    #   lameid: 15618
+    # - id: weather_cloudy_night
+    #   lameid: 12195
+
+  # on_next_screen:
+  #   - homeassistant.event:
+  #       event: esphome.new_screen
+  #       data_template:
+  #         iconname: !lambda "return icon.c_str();"
+  #         text: !lambda "return text.c_str();"
+
+  on_empty_queue:
+    then:
+      lambda: |-
+        std::string temp_str;
+        const int max=200;
+        int r=max,g=max,b=max;
+
+        // date
+        temp_str = id(time_rtc).now().strftime("%d/%m");
+        id(rgb8x24)->text_screen(temp_str,20,10,max,max,max);
+
+        // time
+        temp_str = id(time_rtc).now().strftime("%H:%M");
+        id(rgb8x24)->text_screen(temp_str,20,10,max,max,max);
+
+        // temperature
+        float temp_value = id(bme_temperature).state;
+        temp_str = std::to_string((int)temp_value) + "°C";
+        // Map temperature from -10°C (blue) to 40°C (red)
+        float t = (temp_value + 10.0f) / 50.0f;
+        if (t < 0.0f) t = 0.0f;
+        if (t > 1.0f) t = 1.0f;
+        b = (int)((1.0f - t) * max);
+        r = (int)(t * max);
+        id(rgb8x24)->text_screen(temp_str,20,10,r,0,b);
+
+switch:
+  # - platform: template
+  #   name: "Display"
+  #   turn_on_action:
+  #     lambda: |-
+  #       id(rgb8x24)->set_display_on();
+  #   turn_off_action:
+  #     lambda: |-
+  #       id(rgb8x24)->set_display_off();
+
+  - platform: template
+    name: "Auto-Adjust Brightness"
+    id: switch_autobrightness
+    icon: mdi:brightness-auto
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: |-
+      if (id(aab_enable)) {
+        return true;
+      } else {
+        return false;
+      }
+    turn_on_action:
+      lambda: |-
+        id(aab_enable) = true;
+    turn_off_action:
+      lambda: |-
+        id(aab_enable) = false;
+
+#number:
+# - platform: template
+#   name: "Brightness"
+#   id: display_brightness
+#   min_value: 50
+#   max_value: 150
+#   update_interval: 1s
+#   step: 5
+#   # optimistic: true
+#   lambda: |-
+#     return id(rgb8x24)->get_brightness();
+#   set_action:
+#     lambda: |-
+#       id(rgb8x24).set_brightness(x);
+#   on_value:
+#     lambda: |-
+#       id(rgb8x24)->set_brightness(x);
+#   icon: mdi:brightness-6
+
+output:
+  - platform: ledc
+    pin: $pin_buzzer
+    id: out_buzzer
+
+rtttl:
+  output: out_buzzer
