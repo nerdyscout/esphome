@@ -12,10 +12,10 @@ substitutions:
   mic_din_pin: GPIO32 # SD
 
 esphome:
-  name: clock
-  #  comment:
-  friendly_name: esp
+  name: esp
   name_add_mac_suffix: true
+  #  comment:
+  friendly_name: clock
   project:
     name: esphome.clock
     version: "1.0"
@@ -63,6 +63,16 @@ web_server:
   port: 80
   version: 3
   local: true
+  sorting_groups:
+    - id: sorting_group_controls
+      name: "Controls"
+      sorting_weight: 5
+    - id: sorting_group_sensors
+      name: "Sensors"
+      sorting_weight: 10
+    - id: sorting_group_diagnostic
+      name: "Diagnostic"
+      sorting_weight: 20
 
 debug:
 logger:
@@ -128,6 +138,7 @@ sensor:
     id: wifi_signal_db
     update_interval: 60s
     entity_category: "diagnostic"
+    icon: mdi:wifi
   - platform: uptime
     type: seconds
     name: Uptime Sensor
@@ -137,36 +148,46 @@ sensor:
     address: 0x76
     temperature:
       name: "Temperature"
+      icon: mdi:thermometer
     pressure:
       name: "Pressure"
     humidity:
       name: "Humidity"
+      icon: mdi:water-percent
+  #    web_server:
+  #      sorting_group_id: sorting_group_sensors
 
   # Power
   - platform: adc
     pin: $pin_power
-    name: "Power Voltage"
+    name: "Voltage"
     id: voltage_power
     update_interval: 10s
     device_class: power
     accuracy_decimals: 1
     attenuation: auto
+    icon: mdi:lightning-bolt
+    web_server:
+      sorting_group_id: sorting_group_diagnostic
   # Battery
   - platform: adc
     pin: $pin_battery
-    name: "Power Battery"
+    name: "Battery"
     id: voltage_battery
     update_interval: 10s
     device_class: battery
     unit_of_measurement: "V"
     accuracy_decimals: 1
     attenuation: auto
+    icon: "mdi:battery-medium"
     filters:
       - multiply: 3.1277 # Voltage divider compensation (147k/47k = 3.1277 + tolerance)
       - sliding_window_moving_average:
           window_size: 10
           send_every: 5
           send_first_at: 3
+    web_server:
+      sorting_group_id: sorting_group_diagnostic
 #  - platform: template
 #    name: "Power Battery Percentage"
 #    id: battery_percentage
@@ -209,9 +230,11 @@ binary_sensor:
     filters:
       - delayed_on: 10ms
       - delayed_off: 10ms
-  #    on_press:
-  #      then:
-  #        - ehmtxv2.previous_screen: rgb8x24
+    #    on_press:
+    #      then:
+    #        - ehmtxv2.previous_screen: rgb8x24
+    web_server:
+      sorting_group_id: sorting_group_controls
 
   - platform: gpio
     name: "Button Right"
@@ -224,9 +247,11 @@ binary_sensor:
     filters:
       - delayed_on: 10ms
       - delayed_off: 10ms
-#    on_press:
-#      then:
-#        - ehmtxv2.next_screen: rgb8x24
+    #    on_press:
+    #      then:
+    #        - ehmtxv2.next_screen: rgb8x24
+    web_server:
+      sorting_group_id: sorting_group_controls
 
 font:
   #  - file: Calcium.ttf
@@ -273,8 +298,11 @@ display:
     lambda: |-
       id(rgb8x24)->tick();
       id(rgb8x24)->draw();
-#      it.rectangle(2, 3, 4, 5);
-#      it.print(1, -2, id(font_default), "Hello");
+    #      it.rectangle(2, 3, 4, 5);
+    #      it.print(1, -2, id(font_default), "Hello");
+#    webserver:
+#      sorting_group_id: sorting_group_controls
+
 ehmtxv2:
   id: rgb8x24
   #  icons2html: true
@@ -373,7 +401,9 @@ number:
     on_value:
       lambda: |-
         id(rgb8x24)->set_brightness(x);
-
+    icon: mdi:brightness-6
+    web_server:
+      sorting_group_id: sorting_group_controls
 #output:
 #  - platform: ledc
 #    pin: $pin_buzzer
